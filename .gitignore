@@ -1,3 +1,4 @@
-./tgs_env/.idea/*
+*/.idea/*
 *.xml
-./tgs_env/__pycache__/*
+*/__pycache__/*
+*.iml
