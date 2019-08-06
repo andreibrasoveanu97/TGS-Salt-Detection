@@ -25,6 +25,6 @@ def train(model,
         epoch_losses = []
         for batch in tfe.Iterator(train_loader):
             grads, _loss = gradient(model, inputs=batch[0], targets=batch[1], loss=loss)
-            optimizer.apply_gradients(grads, model.variables)
+            optimizer.apply_gradients(zip(grads, model.variables))
             epoch_losses.append(_loss.numpy())
         print('train loss {}'.format(np.mean(epoch_losses)))
