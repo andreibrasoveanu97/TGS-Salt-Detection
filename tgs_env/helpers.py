@@ -5,6 +5,8 @@ import tensorflow as tf
 
 tf.enable_eager_execution()
 
+# TfRecords
+
 
 def get_train_generator(directory, mask_dir, img_dir, read_type=cv2.IMREAD_GRAYSCALE):
     def train_generator():
