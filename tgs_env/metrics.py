@@ -1,9 +1,9 @@
 import tensorflow as tf
+from keras import backend as K
 
 
 def dice_coef(y_true, y_pred):
-    y_true = tf.reshape(y_true, -1)
-    y_pred = tf.reshape(y_pred, -1)
-    intersection = tf.reduce_prod(y_pred, y_true)
-    return (2 * intersection + tf.keras.backend.epsilon) / (tf.reduce_sum(y_true) + tf.reduce_sum(y_pred) + tf.keras.backend.epsilon)
+    intersection = K.sum(y_true.flatten() * y_pred.flatten(), axis=[1, 2, 3])
+    union = K.sum(y_true, axis=[1, 2, 3]) + K.sum(y_pred, axis=[1, 2, 3])
+    return K.mean((2. * intersection + 1) / (union + 1), axis=0)
 
