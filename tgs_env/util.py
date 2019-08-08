@@ -38,6 +38,8 @@ def join_paths(dir_name, file_name, sep='/'):
     return dir_name + sep + file_name
 
 
+
+
 if __name__ == '__main__':
     image = cv2.imread('./tgs/train/masks/0a0814464f.png', cv2.IMREAD_GRAYSCALE)
     cv2.imshow('der true mask', np.transpose(image))
