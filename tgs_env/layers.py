@@ -13,12 +13,11 @@ class UnetEncodeLayer(tf.keras.layers.Layer):
         if self.dropout_value is not None:
             self.dropout = tf.keras.layers.Dropout(self.dropout_value)
 
+    @tf.contrib.eager.defun
     def call(self, inputs):
         _out = self.layer1(inputs)
         _out = self.layer2(_out)
         _out_pool = self.pool(_out)
-        if self.dropout_value is None:
-            return _out, _out_pool
         return _out, self.dropout(_out_pool)
 
 
@@ -32,11 +31,11 @@ class UnetDecodeLayer(tf.keras.layers.Layer):
         self.layer1 = tf.keras.layers.Conv2D(filters=filters, kernel_size=kernel_size, padding='same', activation='relu')
         self.layer2 = tf.keras.layers.Conv2D(filters=filters, kernel_size=kernel_size, padding='same', activation='relu')
 
+    @tf.contrib.eager.defun
     def call(self, inputs, concat_layer):
         _out = self.deconv_layer(inputs)
         _out = tf.keras.layers.concatenate([concat_layer, _out])
-        if self.dropout:
-            _out = self.dropout(_out)
+        _out = self.dropout(_out)
         _out = self.layer1(_out)
         return self.layer2(_out)
 
@@ -47,6 +46,7 @@ class UnetMiddleLayer(tf.keras.layers.Layer):
         self.layer1 = tf.keras.layers.Conv2D(filters, kernel_size, padding='same', activation='relu')
         self.layer2 = tf.keras.layers.Conv2D(filters, kernel_size, padding='same', activation='relu')
 
+    @tf.contrib.eager.defun
     def call(self, inputs):
         _out = self.layer1(inputs)
         return self.layer2(_out)
