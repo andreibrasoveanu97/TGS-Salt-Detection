@@ -8,5 +8,5 @@ ds_train = create_data_set_from_generator(get_train_generator('./tgs/train', mas
                                           _shapes=(tf.TensorShape([128, 128, 1]), tf.TensorShape([128, 128, 1])))
 
 model = UnetModel()
-optimizer = tf.train.AdamOptimizer(0.0002)
+optimizer = tf.compat.v1.train.AdamOptimizer(0.0002)
 train(model, optimizer, ds_train)
