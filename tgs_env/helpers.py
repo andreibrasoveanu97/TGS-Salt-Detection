@@ -4,6 +4,7 @@ from util import join_paths
 import tensorflow as tf
 import numpy as np
 import time
+
 # TfRecords
 tf.compat.v1.enable_eager_execution()
 import tensorflow.contrib.eager as tfe
@@ -35,8 +36,9 @@ def get_test_generator(directory, img_dir, read_type=cv2.IMREAD_GRAYSCALE):
     return test_generator
 
 
-def create_data_set_from_generator(generator, _types, _shapes, buffer_size=100):
+def create_data_set_from_generator(generator, _types, _shapes, buffer_size=100, batch_size=20):
     ds = tf.data.Dataset.from_generator(generator, _types, _shapes)
+    ds = ds.batch(batch_size)
     ds = ds.prefetch(buffer_size)
     return ds
 
@@ -47,6 +49,27 @@ def get_channels(_type):
     elif _type == cv2.IMREAD_COLOR:
         return 3
     return 1
+
+
+def create_tfrecords(image_mask_list: [()], tf_directory, preprocess_callbacks: [callable] = None,
+                     _type=cv2.IMREAD_GRAYSCALE):
+    for img_file, mask_file in image_mask_list:
+        imgs = [cv2.imread(img_file, _type)]
+        masks = [cv2.imread(mask_file, _type)]
+        file_to_save = tf_directory + '/' + os.path.basename(img_file).split('.')[0]
+        if preprocess_callbacks:
+            for preprocess_callback in preprocess_callbacks:
+                imgs, masks = preprocess_callback(imgs, masks)
+        for index, (img, mask) in enumerate(zip(imgs, masks)):
+            with tf.io.TFRecordWriter(file_to_save + str(index) + '.tfrecord') as writer:
+                img = img.astype(np.float32)
+                mask = mask.astype(np.float32)
+                ser_image = tf.train.Example(features=tf.train.Features(feature={
+                    'img': tf.train.Feature(float_list=tf.train.FloatList(value=img.reshape(-1).tolist())),
+                    'mask': tf.train.Feature(float_list=tf.train.FloatList(value=mask.reshape(-1).tolist()))
+                }))
+
+                writer.write(ser_image.SerializeToString())
 
 
 def create_tfrecord(image_mask_list: [()], tfrecord_file, preprocess_callbacks: [callable] = None,
@@ -61,6 +84,16 @@ def pad_images(img, mask, pad_shapes=((13, 14), (13, 14))):
     img = np.pad(img, pad_shapes, mode='symmetric').astype(np.float32) / 255.0
     mask = np.pad(mask, pad_shapes, mode='symmetric').astype(np.float32) / 255.0
     return img, mask
+
+
+def reshape_imgs(imgs, masks, shape=(128, 128, 1)):
+    _imgs = []
+    _masks = []
+    for img, mask in zip(imgs, masks):
+        (_img, _mask) = reshape_img(img, mask, shape)
+        _imgs.append(_img)
+        _masks.append(_mask)
+    return _imgs, _masks
 
 
 def reshape_img(img, mask, shape=(128, 128, 1)):
@@ -97,42 +130,59 @@ def get_train_val_paths(directory, imgs_dir, masks_dir, percentage=0.8):
 def create_deserializer(shape=(128, 128, 1)):
     def deserialize_tgs_image(tfrecord):
         features = {
-            'img': tf.FixedLenFeature(shape, tf.float32),
-            'mask': tf.FixedLenFeature(shape, tf.float32)
+            'img': tf.io.FixedLenFeature(shape, tf.float32),
+            'mask': tf.io.FixedLenFeature(shape, tf.float32)
         }
-        sample = tf.parse_single_example(tfrecord, features)
+        sample = tf.io.parse_single_example(tfrecord, features)
         img = sample['img']
         mask = sample['mask']
         return tf.cast(img, tf.float64), tf.cast(mask, tf.float64)
+
     return deserialize_tgs_image
 
 
-def create_dataset_from_tfrecord(tf_records, decode_func):
+def create_dataset_from_directory(directory, decode_func, batch_size=20, buffer_size=40, parallel_readers=10, parallel_calls=10):
+    files = tf.data.Dataset.list_files(directory + "/*.tfrecord")
+    dataset = files.apply(tf.contrib.data.parallel_interleave(
+        tf.data.TFRecordDataset, cycle_length=parallel_readers))
+    # dataset = dataset.map(map_func=decode_func)
+    # dataset = dataset.batch(batch_size=batch_size)
+    dataset = dataset.map(map_func=decode_func, num_parallel_calls=parallel_calls)
+    dataset = dataset.batch(batch_size=batch_size)
+    dataset = dataset.prefetch(buffer_size)
+
+    return dataset
+
+
+def create_dataset_from_tfrecord(tf_records, decode_func, batch_size):
     dataset = tf.data.TFRecordDataset(tf_records)
     dataset = dataset.map(decode_func)
-    dataset = dataset.prefetch(64)
+    dataset = dataset.map(batch_size)
+    dataset = dataset.prefetch(40)
     return dataset
 
 
 if __name__ == '__main__':
+    train_ds = create_dataset_from_directory('./train_records', create_deserializer())
+
     # train_ds = create_dataset_from_tfrecord(['train_images.tfrecord'], create_deserializer())
-    # start_time = time.time()
-    # for batch in train_ds.take(3200):
-    #     cv2.imshow('img', (batch[0].numpy() * 255.0).astype(np.uint8))
-    #     cv2.imshow('mask', (batch[1].numpy() * 255.0).astype(np.uint8))
-    #     cv2.waitKey()
-    # print('time elapsed {}'.format(time.time() - start_time))
+    start_time = time.time()
+    for batch in train_ds.take(160):
+        print('.', end='')
+    print('')
+    print('time elapsed {}'.format(time.time() - start_time))
     #
-    # ds_train = create_data_set_from_generator(get_train_generator('./tgs/train', mask_dir='masks', img_dir='images'),
-    #                                           _types=(tf.float64, tf.float64),
-    #                                           _shapes=(tf.TensorShape([128, 128, 1]), tf.TensorShape([128, 128, 1])))
-    # start_time = time.time()
-    # for batch in ds_train.take(3200):
-    #     print('.', end='')
-    # print('')
-    # print('time elapsed {}', format(time.time()-start_time))
-    train_files, validation_files = get_train_val_paths('./tgs/train', masks_dir='masks', imgs_dir='images')
-    print(len(train_files))
-    print(len(validation_files))
-    create_tfrecord(train_files, 'train_images.tfrecord', [reshape_img])
-    create_tfrecord(validation_files, 'validation_images.tfrecord', [reshape_img])
+    ds_train = create_data_set_from_generator(get_train_generator('./tgs/train', mask_dir='masks', img_dir='images'),
+                                              _types=(tf.float64, tf.float64),
+                                              _shapes=(tf.TensorShape([128, 128, 1]), tf.TensorShape([128, 128, 1])))
+
+    start_time = time.time()
+    for batch in ds_train.take(160):
+        print('.', end='')
+    print('')
+    print('time elapsed {}', format(time.time()-start_time))
+    # train_files, validation_files = get_train_val_paths('./tgs/train', masks_dir='masks', imgs_dir='images')
+    # print(len(train_files))
+    # print(len(validation_files))
+    # create_tfrecords(train_files, './test_records', [reshape_imgs])
+    # create_tfrecord(validation_files, 'validation_images.tfrecord', [reshape_img])
