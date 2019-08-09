@@ -162,6 +162,8 @@ def create_dataset_from_tfrecord(tf_records, decode_func, batch_size):
     return dataset
 
 
+
+
 if __name__ == '__main__':
     train_ds = create_dataset_from_directory('./train_records', create_deserializer())
 
