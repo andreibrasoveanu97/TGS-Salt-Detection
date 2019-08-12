@@ -2,7 +2,7 @@ import tensorflow as tf
 import tensorflow.contrib.eager as tfe
 from metrics import dice_coef
 import numpy as np
-tf.compat.v1.enable_eager_execution()
+# tf.compat.v1.enable_eager_execution()
 
 
 def gradient(model, inputs, targets, loss=tf.keras.losses.binary_crossentropy):
