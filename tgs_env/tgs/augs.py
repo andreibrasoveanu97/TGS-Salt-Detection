@@ -29,3 +29,14 @@ def get_rotate_both(degrees=90):
         mask_set.extend(masks2)
         return image_set, mask_set
     return rotate_both
+
+
+def get_resize(width=128, height=128):
+
+    def resize(image_set, mask_set):
+        aug = iaa.Resize({"height": height, "width": width})
+        imgs = aug.augment_images(image_set)
+        masks = aug.augment_images(mask_set)
+        return imgs, masks
+
+    return resize
