@@ -6,8 +6,8 @@ import numpy as np
 import time
 
 # TfRecords
-tf.compat.v1.enable_eager_execution()
-import tensorflow.contrib.eager as tfe
+# tf.compat.v1.enable_eager_execution()
+# import tensorflow.contrib.eager as tfe
 
 
 def get_train_generator(directory, mask_dir, img_dir, read_type=cv2.IMREAD_GRAYSCALE):
@@ -86,14 +86,16 @@ def pad_images(img, mask, pad_shapes=((13, 14), (13, 14))):
     return img, mask
 
 
-def reshape_imgs(imgs, masks, shape=(128, 128, 1)):
-    _imgs = []
-    _masks = []
-    for img, mask in zip(imgs, masks):
-        (_img, _mask) = reshape_img(img, mask, shape)
-        _imgs.append(_img)
-        _masks.append(_mask)
-    return _imgs, _masks
+def get_reshaper(shape=(128, 128, 1)):
+    def reshape_imgs(imgs, masks):
+        _imgs = []
+        _masks = []
+        for img, mask in zip(imgs, masks):
+            (_img, _mask) = reshape_img(img, mask, shape)
+            _imgs.append(_img)
+            _masks.append(_mask)
+        return _imgs, _masks
+    return reshape_imgs
 
 
 def reshape_img(img, mask, shape=(128, 128, 1)):
@@ -141,7 +143,8 @@ def create_deserializer(shape=(128, 128, 1)):
     return deserialize_tgs_image
 
 
-def create_dataset_from_directory(directory, decode_func, batch_size=20, buffer_size=40, parallel_readers=10, parallel_calls=10):
+def create_dataset_from_directory(directory, decode_func, batch_size=20, buffer_size=40, parallel_readers=10,
+                                  parallel_calls=10):
     files = tf.data.Dataset.list_files(directory + "/*.tfrecord")
     dataset = files.apply(tf.contrib.data.parallel_interleave(
         tf.data.TFRecordDataset, cycle_length=parallel_readers))
