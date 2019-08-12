@@ -152,12 +152,12 @@ def create_deserializer(shape=(128, 128, 1)):
         features = {
             'img': tf.io.FixedLenFeature(shape, tf.float32),
             'mask': tf.io.FixedLenFeature(shape, tf.float32)
-            # 'file': tf.io.FixedLenFeature([], tf.string)
         }
+
         sample = tf.io.parse_single_example(tfrecord, features)
         _img = sample['img']
         mask = sample['mask']
-        return tf.cast(_img, tf.float64), tf.cast(mask, tf.float64)
+        return tf.cast(_img, tf.float64) / 255.0, tf.cast(mask, tf.float64) / 255.0
 
     return deserialize_tgs_image
 
@@ -166,10 +166,7 @@ def create_dataset_from_directory(directory, decode_func, batch_size=20, buffer_
                                   parallel_calls=10):
     files = tf.data.Dataset.list_files(directory + "/*.tfrecord")
     dataset = files.interleave(tf.data.TFRecordDataset, cycle_length=parallel_readers)
-    # dataset = files.apply(tf.contrib.data.parallel_interleave(
-    #     tf.data.TFRecordDataset, cycle_length=parallel_readers))
-    # dataset = dataset.map(map_func=decode_func)
-    # dataset = dataset.batch(batch_size=batch_size)
+
     dataset = dataset.map(map_func=decode_func, num_parallel_calls=parallel_calls)
     dataset = dataset.batch(batch_size=batch_size)
     dataset = dataset.prefetch(buffer_size)
@@ -192,9 +189,13 @@ if __name__ == '__main__':
     start_time = time.time()
     for batch in train_ds.take(160):
         img2 = batch[0][0]
-
-        cv2.imshow('img', (img2.numpy()).astype(np.uint8))
-        print(batch[2][0].numpy().decode('utf-8'))
+        img2 = (img2.numpy() * 255.0).astype(np.uint8)
+        cv2.imshow('img', img2)
+        true_img_path = './tgs/train/images/' + os.path.basename(batch[2][0].numpy().decode('utf-8')) + '.png'
+        true_img = cv2.imread(true_img_path, cv2.IMREAD_GRAYSCALE)
+        true_img = cv2.resize(true_img, (128, 128), interpolation=cv2.INTER_CUBIC)
+        cv2.imshow('true',true_img)
+        print(np.where(img2 == true_img))
         # img2 = cv2.imread(batch[2][0].numpy().decode('utf-8') + ', cv2.IMREAD_GRAYSCALE)
         # cv2.imshow('org', img2)
         print(img2.shape)
