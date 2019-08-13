@@ -5,7 +5,7 @@ from albumentations import (RandomContrast, RandomBrightness, ShiftScaleRotate, 
 import tfAugmentor as tfa
 
 
-def tf_augs(img, mask, label = 'segmentation_mask'):
+def tf_augs(img, mask, label='segmentation_mask'):
     list = {'img': img,
             'mask': mask}
     a = tfa.Augmentor(list, label=[label])
