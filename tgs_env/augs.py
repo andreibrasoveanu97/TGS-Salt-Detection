@@ -8,10 +8,10 @@ import random
 def tf_augs(img, mask):
     seed = random.random()
     res = tf.concat([img, mask], axis=2)
-    res = tf.image.random_contrast(res, seed=seed)
+    res = tf.image.random_contrast(res, seed=seed, lower=0.1, upper=0.8)
     res = tf.image.random_flip_left_right(res, seed=seed)
     res = tf.image.random_flip_up_down(res, seed=seed)
-    res = tf.image.random_brightness(res, seed=seed)
+    res = tf.image.random_brightness(res, seed=seed, max_delta=0.9)
     img_aug, mask_aug = tf.split(res, num_or_size_splits=2, axis=2)
     return img_aug, mask_aug
 
