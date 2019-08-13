@@ -43,17 +43,10 @@ def dice_coeff(y_true, y_pred):
     score = (2. * intersection + smooth) / (tf.reduce_sum(y_true_f) + tf.reduce_sum(y_pred_f) + smooth)
     return score
 
+
 def dice_loss(y_true, y_pred):
     loss = 1 - dice_coeff(y_true, y_pred)
     return loss
-
-# def dice_loss(y_true, y_pred):
-#     y_true_f = k.flatten(y_true)
-#     y_pred_f = k.flatten(y_pred)
-#     intersection = y_true_f * y_pred_f
-#     union = y_true_f or y_pred_f
-#     score = union / (2 * intersection)
-#     return 1 - score
 
 
 def combine_loss(y_true, y_pred):
