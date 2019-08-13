@@ -188,7 +188,7 @@ def create_dataset_from_tfrecord(tf_records, decode_func, batch_size=20):
 
 
 if __name__ == '__main__':
-    train_ds = create_dataset_from_directory('./train_records', create_deserializer())
+    train_ds = create_dataset_from_directory('./train_records', create_deserializer(album_aug))
 
     # train_ds = create_dataset_from_tfrecord(['train_images.tfrecord'], create_deserializer())
     start_time = time.time()
