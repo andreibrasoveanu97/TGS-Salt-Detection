@@ -147,7 +147,7 @@ def get_train_val_paths(directory, imgs_dir, masks_dir, percentage=0.8):
     return images[:train_size], images[train_size:]
 
 
-def create_deserializer(shape=(128, 128, 1)):
+def create_deserializer(shape=(128, 128, 1), augmentations: [callable] = None):
     def deserialize_tgs_image(tfrecord):
         features = {
             'img': tf.io.FixedLenFeature(shape, tf.float32),
@@ -157,6 +157,9 @@ def create_deserializer(shape=(128, 128, 1)):
         sample = tf.io.parse_single_example(tfrecord, features)
         _img = sample['img']
         mask = sample['mask']
+        if augmentations:
+            for augmentation in augmentations:
+                _img, mask = augmentation(_img, mask)
         return tf.cast(_img, tf.float64) / 255.0, tf.cast(mask, tf.float64) / 255.0
 
     return deserialize_tgs_image
