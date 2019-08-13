@@ -1,5 +1,17 @@
 import imgaug.augmenters as iaa
 import numpy as np
+import tensorflow as tf
+from albumentations import (HorizontalFlip, RandomBrightness, RandomContrast, ShiftScaleRotate)
+import tfAugmentor as tfa
+
+
+def tf_augs(img, mask, label = 'segmentation_mask'):
+    list = {'img': img,
+            'mask': mask}
+    a = tfa.Augmentor(list, label=[label])
+    a.flip_left_right(probability=0.5)
+    augmented = a.out
+    return augmented['img'], augmented['mask']
 
 
 def flip(image_set, mask_set):
@@ -8,13 +20,16 @@ def flip(image_set, mask_set):
     imgs, masks = aug.augment_images(image_set, mask_set)
     return imgs, masks
 
+
 def flip(img, mask, prob=0.5):
     aug = iaa.Fliplr(prob)
     res = np.concatenate([img, mask], axis=2)
     res = aug.augment_image(res)
     return res[:,:,0], res[:,:,1]
 
-def gamma_contrast(img, mask, prob)
+def gamma_contrast(img, mask, prob):
+    aug = aat.RandomContrast(p=0.5)
+
 
 def get_rotate(degrees=90):
 
