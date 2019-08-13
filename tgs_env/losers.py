@@ -49,7 +49,7 @@ def dice_loss(y_true, y_pred):
     return loss
 
 
-def combine_loss(y_true, y_pred):
+def bce_dice_loss(y_true, y_pred):
     return 0.85*dice_loss(y_true, y_pred) + 0.15*tf.keras.losses.binary_crossentropy(y_true, y_pred)
 
 
@@ -65,3 +65,7 @@ def jaccard(y_true, y_pred):
 
 def jaccard_loss(y_true, y_pred):
     return 1 - jaccard(y_true, y_pred)
+
+
+def bce_jacard_loss(y_true, y_pred):
+    return jaccard(y_true, y_pred) + tf.keras.losses.binary_crossentropy(y_true, y_pred)
