@@ -4,6 +4,7 @@ import tensorflow as tf
 from albumentations import (RandomContrast, RandomBrightness, ShiftScaleRotate, HorizontalFlip, Compose)
 import random
 
+
 def tf_augs(img, mask):
     seed = random.random()
     res = tf.concat(img, mask, axis=2)

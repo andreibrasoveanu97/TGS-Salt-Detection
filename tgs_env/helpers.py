@@ -173,7 +173,7 @@ def create_dataset_from_directory(directory, decode_func, batch_size=20, buffer_
     dataset = dataset.map(map_func=decode_func, num_parallel_calls=parallel_calls)
     dataset = dataset.batch(batch_size=batch_size)
     dataset = dataset.prefetch(buffer_size)
-
+    dataset = dataset.cache()
     return dataset
 
 
