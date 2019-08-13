@@ -177,10 +177,10 @@ def create_dataset_from_directory(directory, decode_func, batch_size=20, buffer_
     return dataset
 
 
-def create_dataset_from_tfrecord(tf_records, decode_func, batch_size):
+def create_dataset_from_tfrecord(tf_records, decode_func, batch_size=20):
     dataset = tf.data.TFRecordDataset(tf_records)
     dataset = dataset.map(decode_func)
-    dataset = dataset.map(batch_size)
+    dataset = dataset.batch(batch_size)
     dataset = dataset.prefetch(40)
     return dataset
 
