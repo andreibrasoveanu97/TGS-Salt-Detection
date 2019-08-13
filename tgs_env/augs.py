@@ -2,16 +2,17 @@ import imgaug.augmenters as iaa
 import numpy as np
 import tensorflow as tf
 from albumentations import (RandomContrast, RandomBrightness, ShiftScaleRotate, HorizontalFlip, Compose)
-import tfAugmentor as tfa
+import random
 
-
-def tf_augs(img, mask, label = 'segmentation_mask'):
-    list = {'img': img,
-            'mask': mask}
-    a = tfa.Augmentor(list, label=[label])
-    a.flip_left_right(probability=0.5)
-    augmented = a.out
-    return augmented['img'], augmented['mask']
+def tf_augs(img, mask):
+    seed = random.random()
+    res = tf.concat(img, mask, axis=2)
+    res = tf.image.random_contrast(res, seed=seed)
+    res = tf.image.random_flip_left_right(res, seed=seed)
+    res = tf.image.random_flip_up_down(res, seed=seed)
+    res = tf.image.random_brightness(res, seed=seed)
+    img_aug, mask_aug = tf.split(res, num_or_size_splits=2, axis=2)
+    return img_aug, mask_aug
 
 
 def strong_aug(p=0.9):
