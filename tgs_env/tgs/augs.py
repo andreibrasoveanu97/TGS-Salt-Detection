@@ -8,6 +8,13 @@ def flip(image_set, mask_set):
     imgs, masks = aug.augment_images(image_set, mask_set)
     return imgs, masks
 
+def flip(img, mask, prob=0.5):
+    aug = iaa.Fliplr(prob)
+    res = np.concatenate([img, mask], axis=2)
+    res = aug.augment_image(res)
+    return res[:,:,0], res[:,:,1]
+
+def gamma_contrast(img, mask, prob)
 
 def get_rotate(degrees=90):
 
