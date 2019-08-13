@@ -58,7 +58,6 @@ class UnetModel(tf.keras.Model):
 
         self.out_layer = tf.keras.layers.Conv2D(1, (1, 1), padding="same", activation="sigmoid")
 
-    @tf.contrib.eager.defun
     def call(self, inputs):
         block1_en_out, block1_en_out_pool = self.block1_encoder(inputs)
         block2_en_out, block2_en_out_pool = self.block2_encoder(block1_en_out_pool)

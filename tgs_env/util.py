@@ -2,6 +2,17 @@ import numpy as np
 import cv2
 import pandas as pd
 import os
+import matplotlib.pyplot as plt
+
+
+def print_history(history):
+    fig, ax = plt.subplots(1, 2, figsize=(16, 9))
+    ax[0].plot(history.epoch, history.history["loss"], label="Train loss")
+    ax[0].plot(history.epoch, history.history["val_loss"], label="Validation loss")
+    ax[0].legend()
+    ax[1].plot(history.epoch, history.history["dice_coeff"], label="Train score")
+    ax[1].plot(history.epoch, history.history["val_dice_coeff"], label="Validation score")
+    ax[1].legend()
 
 
 def encode_rle(imag: np.array, order='F', object_value=255):
