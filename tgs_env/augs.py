@@ -16,6 +16,14 @@ def tf_augs(img, mask):
     return img_aug, mask_aug
 
 
+def tf_alldir_augs(img, mask):
+    seed = random.random()
+    res = tf.concat([img, mask], axis=2)
+    res = tf.image.random_flip_left_right(res, seed=seed)
+    res = tf.image.random_flip_up_down(res, seed=seed)
+    img_aug, mask_aug = tf.split(res, num_or_size_splits=2, axis=2)
+    return img_aug, mask_aug
+
 def strong_aug(p=0.9):
     return Compose([
         RandomBrightness(p=0.2, limit=0.2),
