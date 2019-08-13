@@ -7,7 +7,7 @@ import random
 
 def tf_augs(img, mask):
     seed = random.random()
-    res = tf.concat(img, mask, axis=2)
+    res = tf.concat([img, mask], axis=2)
     res = tf.image.random_contrast(res, seed=seed)
     res = tf.image.random_flip_left_right(res, seed=seed)
     res = tf.image.random_flip_up_down(res, seed=seed)
