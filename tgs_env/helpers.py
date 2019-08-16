@@ -5,6 +5,7 @@ import tensorflow as tf
 import numpy as np
 import time
 
+
 # TfRecords
 # tf.compat.v1.enable_eager_execution()
 # import tensorflow.contrib.eager as tfe
@@ -51,32 +52,41 @@ def get_channels(_type):
     return 1
 
 
-def create_tfrecords(image_mask_list: [()], tf_directory, preprocess_callbacks: [callable] = None,
-                     _type=cv2.IMREAD_GRAYSCALE):
-    for img_file, mask_file in image_mask_list:
-        imgs = [cv2.imread(img_file, _type)]
-        masks = [cv2.imread(mask_file, _type)]
-        file_to_save = tf_directory + '/' + os.path.basename(img_file).split('.')[0]
-        if preprocess_callbacks:
-            for preprocess_callback in preprocess_callbacks:
-                imgs, masks = preprocess_callback(imgs, masks)
-        for index, (img, mask) in enumerate(zip(imgs, masks)):
-            # cv2.imshow('img', img)
-            # cv2.imshow('maks', mask)
-            # cv2.waitKey()
-            with tf.io.TFRecordWriter(file_to_save + str(index) + '.tfrecord') as writer:
-                img = img.astype(np.float32)
-                mask = mask.astype(np.float32)
-                # cv2.imshow('img', (img * 255.0).astype(np.uint8))
-                # cv2.imshow('maks', (mask * 255.0).astype(np.uint8))
-                # cv2.waitKey()
-                ser_image = tf.train.Example(features=tf.train.Features(feature={
-                    'img': tf.train.Feature(float_list=tf.train.FloatList(value=img.reshape(-1).tolist())),
-                    'mask': tf.train.Feature(float_list=tf.train.FloatList(value=mask.reshape(-1).tolist()))
-                    # 'file': tf.train.Feature(bytes_list=tf.train.BytesList(value=[file_to_save.encode('utf-8')]))
-                }))
+def float_features_creator(img, mask):
+    img = img.astype(np.float32)
+    mask = mask.astype(np.float32)
+    ser_image = tf.train.Example(features=tf.train.Features(feature={
+        'img': tf.train.Feature(float_list=tf.train.FloatList(value=img.reshape(-1).tolist())),
+        'mask': tf.train.Feature(float_list=tf.train.FloatList(value=mask.reshape(-1).tolist()))
+    }))
+    return ser_image
 
-                writer.write(ser_image.SerializeToString())
+
+def int_feature_creator(img, mask):
+    img = img.astype(np.int64)
+    mask = mask.astype(np.int64)
+    ser_image = tf.train.Example(features=tf.train.Features(feature={
+        'img': tf.train.Feature(int64_list=tf.train.Int64List(value=img.reshape(-1).tolist())),
+        'mask': tf.train.Feature(int64_list=tf.train.Int64List(value=mask.reshape(-1).tolist()))
+    }))
+    return ser_image
+
+
+def get_tfrecords_creator(feature_creator: callable = float_features_creator):
+    def create_tfrecords(image_mask_list: [()], tf_directory, preprocess_callbacks: [callable] = None,
+                         _type=cv2.IMREAD_GRAYSCALE):
+        for img_file, mask_file in image_mask_list:
+            imgs = [cv2.imread(img_file, _type)]
+            masks = [cv2.imread(mask_file, _type)]
+            file_to_save = tf_directory + '/' + os.path.basename(img_file).split('.')[0]
+            if preprocess_callbacks:
+                for preprocess_callback in preprocess_callbacks:
+                    imgs, masks = preprocess_callback(imgs, masks)
+            for index, (img, mask) in enumerate(zip(imgs, masks)):
+                with tf.io.TFRecordWriter(file_to_save + str(index) + '.tfrecord') as writer:
+                    ser_image = feature_creator(img, mask)
+                    writer.write(ser_image.SerializeToString())
+    return create_tfrecords
 
 
 def create_tfrecord(image_mask_list: [()], tfrecord_file, preprocess_callbacks: [callable] = None,
@@ -98,16 +108,11 @@ def get_reshaper(shape=(128, 128)):
         _imgs = []
         _masks = []
         for img, mask in zip(imgs, masks):
-            # cv2.imshow('img', img)
-            # cv2.imshow('mask', mask)
-            # cv2.waitKey()
             (_img, _mask) = reshape_img(img, mask, shape=shape)
             _imgs.append(_img)
             _masks.append(_mask)
-            # cv2.imshow('_img', _img)
-            # cv2.imshow('_mask', _mask)
-            # cv2.waitKey()
         return _imgs, _masks
+
     return reshape_imgs
 
 
@@ -115,9 +120,6 @@ def reshape_img(img, mask, shape=(128, 128)):
     _shape = (shape[0], shape[1], 1)
     img = cv2.resize(img, shape, interpolation=cv2.INTER_CUBIC).reshape(_shape)
     mask = cv2.resize(mask, shape, interpolation=cv2.INTER_CUBIC).reshape(_shape)
-    # cv2.imshow('r_img', img)
-    # cv2.imshow('r_mask', mask)
-    # cv2.waitKey()
     return img, mask
 
 
@@ -147,11 +149,11 @@ def get_train_val_paths(directory, imgs_dir, masks_dir, percentage=0.8):
     return images[:train_size], images[train_size:]
 
 
-def create_deserializer(shape=(128, 128, 1), augmentations: [callable] = None):
+def create_deserializer(shape=(128, 128, 1), augmentations: [callable] = None, _type=tf.float32):
     def deserialize_tgs_image(tfrecord):
         features = {
-            'img': tf.io.FixedLenFeature(shape, tf.float32),
-            'mask': tf.io.FixedLenFeature(shape, tf.float32)
+            'img': tf.io.FixedLenFeature(shape, _type),
+            'mask': tf.io.FixedLenFeature(shape, _type)
         }
 
         sample = tf.io.parse_single_example(tfrecord, features)
@@ -160,7 +162,7 @@ def create_deserializer(shape=(128, 128, 1), augmentations: [callable] = None):
         if augmentations:
             for augmentation in augmentations:
                 _img, mask = augmentation(_img, mask)
-        return tf.cast(_img, tf.float64) / 255.0, tf.cast(mask, tf.float64) / 255.0
+        return _img, mask
 
     return deserialize_tgs_image
 
@@ -185,27 +187,26 @@ def create_dataset_from_tfrecord(tf_records, decode_func, batch_size=20):
     return dataset
 
 
-
-
 if __name__ == '__main__':
-    train_ds = create_dataset_from_directory('./train_records', create_deserializer(album_aug))
+    pass
+    # train_ds = create_dataset_from_directory('./train_records', create_deserializer(album_aug))
 
     # train_ds = create_dataset_from_tfrecord(['train_images.tfrecord'], create_deserializer())
-    start_time = time.time()
-    for batch in train_ds.take(160):
-        img2 = batch[0][0]
-        img2 = (img2.numpy() * 255.0).astype(np.uint8)
-        cv2.imshow('img', img2)
-        true_img_path = './tgs/train/images/' + os.path.basename(batch[2][0].numpy().decode('utf-8')) + '.png'
-        true_img = cv2.imread(true_img_path, cv2.IMREAD_GRAYSCALE)
-        true_img = cv2.resize(true_img, (128, 128), interpolation=cv2.INTER_CUBIC)
-        cv2.imshow('true',true_img)
-        print(np.where(img2 == true_img))
+    # start_time = time.time()
+    # for batch in train_ds.take(160):
+    #     img2 = batch[0][0]
+    #     img2 = (img2.numpy() * 255.0).astype(np.uint8)
+    #     cv2.imshow('img', img2)
+    #     true_img_path = './tgs/train/images/' + os.path.basename(batch[2][0].numpy().decode('utf-8')) + '.png'
+    #     true_img = cv2.imread(true_img_path, cv2.IMREAD_GRAYSCALE)
+    #     true_img = cv2.resize(true_img, (128, 128), interpolation=cv2.INTER_CUBIC)
+    #     cv2.imshow('true', true_img)
+    #     print(np.where(img2 == true_img))
         # img2 = cv2.imread(batch[2][0].numpy().decode('utf-8') + ', cv2.IMREAD_GRAYSCALE)
         # cv2.imshow('org', img2)
-        print(img2.shape)
-        cv2.waitKey()
-    print('')
+        # print(img2.shape)
+        # cv2.waitKey()
+    # print('')
     # print('time elapsed {}'.format(time.time() - start_time))
     # #
     # ds_train = create_data_set_from_generator(get_train_generator('./tgs/train', mask_dir='masks', img_dir='images'),

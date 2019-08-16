@@ -1,7 +1,7 @@
 import imgaug.augmenters as iaa
 import numpy as np
 import tensorflow as tf
-from albumentations import (RandomContrast, RandomBrightness, ShiftScaleRotate, HorizontalFlip, Compose)
+from albumentations import (ShiftScaleRotate, HorizontalFlip, Compose)
 import random
 
 
@@ -16,6 +16,16 @@ def tf_augs(img, mask):
     return img_aug, mask_aug
 
 
+def get_tf_pad(padding=((13, 14), (13, 14))):
+    def tf_pad(img, mask):
+        return tf.pad(img, padding, 'SYMMETRIC'), tf.pad(mask, padding, 'SYMMETRIC')
+    return tf_pad
+
+
+def norm_and_float(img, mask):
+    return tf.cast(img, tf.float64) / 255.0, tf.cast(mask, tf.float64) / 255.0
+
+
 def tf_alldir_augs(img, mask):
     seed = random.random()
     res = tf.concat([img, mask], axis=2)
@@ -24,10 +34,19 @@ def tf_alldir_augs(img, mask):
     img_aug, mask_aug = tf.split(res, num_or_size_splits=2, axis=2)
     return img_aug, mask_aug
 
+
+def tf_alldir_rotate_augs(img, mask):
+    seed = random.random()
+    res = tf.concat([img, mask], axis=2)
+    res = tf.image.random_flip_left_right(res, seed=seed)
+    res = tf.image.random_flip_up_down(res, seed=seed)
+    res = tf.image.rot90(res, seed % 3)
+    img_aug, mask_aug = tf.split(res, num_or_size_splits=2, axis=2)
+    return img_aug, mask_aug
+
+
 def strong_aug(p=0.9):
     return Compose([
-        RandomBrightness(p=0.2, limit=0.2),
-        RandomContrast(p=0.1, limit=0.2),
         ShiftScaleRotate(shift_limit=0.1625, scale_limit=0.6, rotate_limit=0, p=0.7),
         HorizontalFlip(p=0.5)
     ], p=p)
@@ -35,7 +54,7 @@ def strong_aug(p=0.9):
 
 def album_aug(img, mask):
     augment = strong_aug()
-    data = {'image':img, 'mask':mask}
+    data = {'image': img, 'mask': mask}
     augmented = augment(**data)
     return augmented['image'], augmented['mask']
 
@@ -46,17 +65,6 @@ def flip(image_set, mask_set):
     imgs, masks = aug.augment_images(image_set, mask_set)
     return imgs, masks
 
-
-def flip(img, mask, prob=0.5):
-    aug = iaa.Fliplr(prob)
-    res = np.concatenate([img, mask], axis=2)
-    res = aug.augment_image(res)
-    return res[:,:,0], res[:,:,1]
-
-
-def gamma_contrast(img, mask, prob):
-    # aug = aat.RandomContrast(p=0.5)
-    pass
 
 def get_rotate(degrees=90):
 
