@@ -45,6 +45,10 @@ def tf_alldir_rotate_augs(img, mask):
     return img_aug, mask_aug
 
 
+def expand_dims(img, mask):
+    return tf.expand_dims(img, -1), tf.expand_dims(mask, -1)
+
+
 def strong_aug(p=0.9):
     return Compose([
         ShiftScaleRotate(shift_limit=0.1625, scale_limit=0.6, rotate_limit=0, p=0.7),
