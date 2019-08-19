@@ -84,7 +84,20 @@ def create_coverage_stratas(imags_df, _type=cv2.IMREAD_GRAYSCALE):
     return imags_df
 
 
-#
+def predict_test(model, _input, trues, shape=(101, 101)):
+    predictions = model.predict(_input)
+    num_of_images = _input.shape[0]
+    rows = int(np.sqrt(num_of_images)) + 1
+    cols = rows
+    f, ax = plt.subplots(rows, cols, figsize=(20, 20))
+    for i, (img, mask, true_mask) in enumerate(zip(_input, predictions, trues)):
+        ax[i // rows][i % cols].imshow(img.reshape(shape), cmap='gray', vmin=0.0, vmax=1.0)
+        ax[i // rows][i % cols].imshow(mask.reshape(shape), alpha=0.8, cmap='Greens', vmin=0.0, vmax=1.0)
+        ax[i // rows][i % cols].imshow(true_mask.reshape(shape), alpha=0.3, cmap='Reds', vmin=0.0, vmax=1.0)
+
+    #
+
+
 # data = get_paths('./drive/My Drive/tgs/train', 'masks', 'images')
 # data = data.set_index('id')
 
