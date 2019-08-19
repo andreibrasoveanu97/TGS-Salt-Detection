@@ -39,7 +39,7 @@ def tf_alldir_rotate_augs(img, mask):
     seed = random.random()
     res = tf.concat([img, mask], axis=2)
     res = tf.image.random_flip_left_right(res, seed=seed)
-    res = tf.image.random_flip_up_down(res, seed=seed)
+    res = tf.image.random_flip_up_down(res, seed=int(seed))
     res = tf.image.rot90(res, seed % 3)
     img_aug, mask_aug = tf.split(res, num_or_size_splits=2, axis=2)
     return img_aug, mask_aug
