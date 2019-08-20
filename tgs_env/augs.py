@@ -3,7 +3,7 @@ import numpy as np
 import tensorflow as tf
 from albumentations import (ShiftScaleRotate, HorizontalFlip, Compose)
 import random
-
+import cv2
 
 def tf_augs(img, mask):
     seed = random.random()
@@ -21,6 +21,11 @@ def get_tf_pad(padding=((13, 14), (13, 14))):
         return tf.pad(img, padding, 'SYMMETRIC'), tf.pad(mask, padding, 'SYMMETRIC')
     return tf_pad
 
+
+def get_resize202():
+    def resize202(img, mask):
+        return cv2.resize(img, (202, 202)), cv2.resize(mask, (202, 202))
+    return resize202
 
 def norm_and_float(img, mask):
     return tf.cast(img, tf.float64) / 255.0, tf.cast(mask, tf.float64) / 255.0
