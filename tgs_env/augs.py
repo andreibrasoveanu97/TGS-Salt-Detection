@@ -27,7 +27,8 @@ def cv_resize202(img, mask):
 
 
 def tf_resize202(img, mask):
-    return tf.py_function(cv_resize202, [img, mask], Tout=tf.int64)
+    return tf.py_function(cv_resize202, [img, mask], Tout=(tf.int64, tf.int64))
+
 
 def norm_and_float(img, mask):
     return tf.cast(img, tf.float64) / 255.0, tf.cast(mask, tf.float64) / 255.0
