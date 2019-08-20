@@ -22,10 +22,12 @@ def get_tf_pad(padding=((13, 14), (13, 14))):
     return tf_pad
 
 
-def get_resize202():
-    def resize202(img, mask):
-        return cv2.resize(img, (202, 202)), cv2.resize(mask, (202, 202))
-    return resize202
+def cv_resize202(img, mask):
+    return cv2.resize(img, (202, 202)), cv2.resize(mask, (202, 202))
+
+
+def tf_resize202(img, mask):
+    return tf.py_function(cv_resize202, [img, mask])
 
 def norm_and_float(img, mask):
     return tf.cast(img, tf.float64) / 255.0, tf.cast(mask, tf.float64) / 255.0
