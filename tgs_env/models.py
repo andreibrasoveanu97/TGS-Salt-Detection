@@ -277,8 +277,8 @@ def build_model_resnet(input_layer, start_neurons, DropoutRatio = 0.5):
     uconv4 = residual_block(uconv4, start_neurons * 8, True)
 
     # 12 -> 25
-    # deconv3 = Conv2DTranspose(start_neurons * 4, (3, 3), strides=(2, 2), padding="same")(uconv4)
-    deconv3 = tf.keras.layers.Conv2DTranspose(start_neurons * 4, (3, 3), strides=(2, 2), padding="valid")(uconv4)
+    deconv3 = tf.keras.layers.Conv2DTranspose(start_neurons * 4, (3, 3), strides=(2, 2), padding="same")(uconv4)
+    #deconv3 = tf.keras.layers.Conv2DTranspose(start_neurons * 4, (3, 3), strides=(2, 2), padding="valid")(uconv4)
     uconv3 = tf.keras.layers.concatenate([deconv3, conv3])
     uconv3 = tf.keras.layers.Dropout(DropoutRatio)(uconv3)
 
@@ -296,8 +296,8 @@ def build_model_resnet(input_layer, start_neurons, DropoutRatio = 0.5):
     uconv2 = residual_block(uconv2, start_neurons * 2, True)
 
     # 50 -> 101
-    # deconv1 = Conv2DTranspose(start_neurons * 1, (3, 3), strides=(2, 2), padding="same")(uconv2)
-    deconv1 = tf.keras.layers.Conv2DTranspose(start_neurons * 1, (3, 3), strides=(2, 2), padding="valid")(uconv2)
+    deconv1 = tf.keras.layers.Conv2DTranspose(start_neurons * 1, (3, 3), strides=(2, 2), padding="same")(uconv2)
+    #deconv1 = tf.keras.layers.Conv2DTranspose(start_neurons * 1, (3, 3), strides=(2, 2), padding="valid")(uconv2)
     uconv1 = tf.keras.layers.concatenate([deconv1, conv1])
 
     uconv1 = tf.keras.layers.Dropout(DropoutRatio)(uconv1)
