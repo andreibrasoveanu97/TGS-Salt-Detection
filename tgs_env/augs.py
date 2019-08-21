@@ -5,6 +5,7 @@ from albumentations import (ShiftScaleRotate, HorizontalFlip, Compose)
 import random
 import cv2
 
+
 def tf_augs(img, mask):
     seed = random.random()
     res = tf.concat([img, mask], axis=2)
@@ -22,15 +23,13 @@ def get_tf_pad(padding=((13, 14), (13, 14))):
     return tf_pad
 
 
-
-
 def cv_resize202(img, mask):
-    return cv2.resize(img, (202, 202)), cv2.resize(mask, (202, 202))
+    return cv2.resize(img, (256, 256)), cv2.resize(mask, (256, 256))
 
 
 def tf_resize202(img, mask):
-    return tf.image.resize_images([img, mask], (202, 202), align_corners=True)
-    #return tf.py_func(cv_resize202, [img, mask], Tout=(tf.int64, tf.int64))
+    return tf.image.resize_images(img, (202, 202)), tf.image.resize_images(mask, (202, 202))
+    # return tf.py_function(cv_resize202, [img, mask], Tout=(tf.int64, tf.int64))
 
 
 def norm_and_float(img, mask):
@@ -101,6 +100,15 @@ def get_rotate_both(degrees=90):
         return imgs1, masks1
     return rotate_both
 
+
+def center_pad(image):
+    return np.pad(image, (27, 27), 'edge')
+
+
+def center_pad_both(image, mask, pad_left, pad_right):
+    image_pad = center_pad(image, pad_left, pad_right)
+    mask_pad = center_pad(mask, pad_left, pad_right)
+    return image_pad, mask_pad
 
 def get_resize(width=128, height=128):
 

@@ -3,8 +3,8 @@ import tensorflow as tf
 import cv2
 # import tensorflow.contrib.eager as tfe
 import numpy as np
-
 from layers import UnetDecodeLayer, UnetMiddleLayer, UnetEncodeLayer
+import segmentation_models as sm
 
 
 class UnetModel(tf.keras.Model):
@@ -311,6 +311,10 @@ def build_model_resnet(input_layer, start_neurons, DropoutRatio = 0.5):
     output_layer = tf.keras.layers.Activation('sigmoid')(output_layer_noActi)
 
     return output_layer
+
+def resnet_model():
+    model = sm.Unet('resnet34', classes=1, activation='sigmoid')
+    model.summary()
 
 if __name__ == '__main__':
     model = UnetModel()
