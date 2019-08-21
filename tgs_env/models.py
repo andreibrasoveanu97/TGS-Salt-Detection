@@ -234,36 +234,45 @@ def residual_block(blockInput, num_filters=16, batch_activate = False):
     return x
 
 
-def build_model_resnet(input_layer, start_neurons, DropoutRatio = 0.5):
-    conv1 = tf.keras.layers.Conv2D(start_neurons * 1, (3, 3), activation=None, padding="same")(input_layer)
+def squeeze_excitation_layer(_input, ratio=3.0):
+    x = tf.keras.layers.GlobalAveragePooling2D()(_input)
+    x = tf.keras.layers.Dense(int(_input.shape[-1] // ratio))(x)
+    x = tf.keras.layers.Activation('relu')(x)
+    x = tf.keras.layers.Dense(_input.shape[-1])(x)
+    x = tf.keras.layers.Activation('sigmoid')(x)
+    return tf.keras.layers.multiply([x, _input])
+
+
+def build_model_resnet(input_layer, start_neurons, DropoutRatio=0.5, activation=None):
+    conv1 = tf.keras.layers.Conv2D(start_neurons * 1, (3, 3), activation=activation, padding="same")(input_layer)
     conv1 = residual_block(conv1, start_neurons * 1)
     conv1 = residual_block(conv1, start_neurons * 1, True)
     pool1 = tf.keras.layers.MaxPooling2D((2, 2))(conv1)
     pool1 = tf.keras.layers.Dropout(DropoutRatio / 2)(pool1)
 
     # 50 -> 25
-    conv2 = tf.keras.layers.Conv2D(start_neurons * 2, (3, 3), activation=None, padding="same")(pool1)
+    conv2 = tf.keras.layers.Conv2D(start_neurons * 2, (3, 3), activation=activation, padding="same")(pool1)
     conv2 = residual_block(conv2, start_neurons * 2)
     conv2 = residual_block(conv2, start_neurons * 2, True)
     pool2 = tf.keras.layers.MaxPooling2D((2, 2))(conv2)
     pool2 = tf.keras.layers.Dropout(DropoutRatio)(pool2)
 
     # 25 -> 12
-    conv3 = tf.keras.layers.Conv2D(start_neurons * 4, (3, 3), activation=None, padding="same")(pool2)
+    conv3 = tf.keras.layers.Conv2D(start_neurons * 4, (3, 3), activation=activation, padding="same")(pool2)
     conv3 = residual_block(conv3, start_neurons * 4)
     conv3 = residual_block(conv3, start_neurons * 4, True)
     pool3 = tf.keras.layers.MaxPooling2D((2, 2))(conv3)
     pool3 = tf.keras.layers.Dropout(DropoutRatio)(pool3)
 
     # 12 -> 6
-    conv4 = tf.keras.layers.Conv2D(start_neurons * 8, (3, 3), activation=None, padding="same")(pool3)
+    conv4 = tf.keras.layers.Conv2D(start_neurons * 8, (3, 3), activation=activation, padding="same")(pool3)
     conv4 = residual_block(conv4, start_neurons * 8)
     conv4 = residual_block(conv4, start_neurons * 8, True)
     pool4 = tf.keras.layers.MaxPooling2D((2, 2))(conv4)
     pool4 = tf.keras.layers.Dropout(DropoutRatio)(pool4)
 
     # Middle
-    convm = tf.keras.layers.Conv2D(start_neurons * 16, (3, 3), activation=None, padding="same")(pool4)
+    convm = tf.keras.layers.Conv2D(start_neurons * 16, (3, 3), activation=activation, padding="same")(pool4)
     convm = residual_block(convm, start_neurons * 16)
     convm = residual_block(convm, start_neurons * 16, True)
 
@@ -272,7 +281,7 @@ def build_model_resnet(input_layer, start_neurons, DropoutRatio = 0.5):
     uconv4 = tf.keras.layers.concatenate([deconv4, conv4])
     uconv4 = tf.keras.layers.Dropout(DropoutRatio)(uconv4)
 
-    uconv4 = tf.keras.layers.Conv2D(start_neurons * 8, (3, 3), activation=None, padding="same")(uconv4)
+    uconv4 = tf.keras.layers.Conv2D(start_neurons * 8, (3, 3), activation=activation, padding="same")(uconv4)
     uconv4 = residual_block(uconv4, start_neurons * 8)
     uconv4 = residual_block(uconv4, start_neurons * 8, True)
 
@@ -282,7 +291,7 @@ def build_model_resnet(input_layer, start_neurons, DropoutRatio = 0.5):
     uconv3 = tf.keras.layers.concatenate([deconv3, conv3])
     uconv3 = tf.keras.layers.Dropout(DropoutRatio)(uconv3)
 
-    uconv3 = tf.keras.layers.Conv2D(start_neurons * 4, (3, 3), activation=None, padding="same")(uconv3)
+    uconv3 = tf.keras.layers.Conv2D(start_neurons * 4, (3, 3), activation=activation, padding="same")(uconv3)
     uconv3 = residual_block(uconv3, start_neurons * 4)
     uconv3 = residual_block(uconv3, start_neurons * 4, True)
 
@@ -291,7 +300,7 @@ def build_model_resnet(input_layer, start_neurons, DropoutRatio = 0.5):
     uconv2 = tf.keras.layers.concatenate([deconv2, conv2])
 
     uconv2 = tf.keras.layers.Dropout(DropoutRatio)(uconv2)
-    uconv2 = tf.keras.layers.Conv2D(start_neurons * 2, (3, 3), activation=None, padding="same")(uconv2)
+    uconv2 = tf.keras.layers.Conv2D(start_neurons * 2, (3, 3), activation=activation, padding="same")(uconv2)
     uconv2 = residual_block(uconv2, start_neurons * 2)
     uconv2 = residual_block(uconv2, start_neurons * 2, True)
 
@@ -301,16 +310,105 @@ def build_model_resnet(input_layer, start_neurons, DropoutRatio = 0.5):
     uconv1 = tf.keras.layers.concatenate([deconv1, conv1])
 
     uconv1 = tf.keras.layers.Dropout(DropoutRatio)(uconv1)
-    uconv1 = tf.keras.layers.Conv2D(start_neurons * 1, (3, 3), activation=None, padding="same")(uconv1)
+    uconv1 = tf.keras.layers.Conv2D(start_neurons * 1, (3, 3), activation=activation, padding="same")(uconv1)
     uconv1 = residual_block(uconv1, start_neurons * 1)
     uconv1 = residual_block(uconv1, start_neurons * 1, True)
 
     # uconv1 = Dropout(DropoutRatio/2)(uconv1)
     # output_layer = Conv2D(1, (1,1), padding="same", activation="sigmoid")(uconv1)
-    output_layer_noActi = tf.keras.layers.Conv2D(1, (1, 1), padding="same", activation=None)(uconv1)
+    output_layer_noActi = tf.keras.layers.Conv2D(1, (1, 1), padding="same", activation=activation)(uconv1)
     output_layer = tf.keras.layers.Activation('sigmoid')(output_layer_noActi)
 
     return output_layer
+
+
+
+def build_res_se_modelinput_layer(input_layer, start_neurons, DropoutRatio=0.5, activation=None):
+    conv1 = tf.keras.layers.Conv2D(start_neurons * 1, (3, 3), activation=activation, padding="same")(input_layer)
+    conv1 = residual_block(conv1, start_neurons * 1)
+    conv1 = residual_block(conv1, start_neurons * 1, True)
+    conv1 = squeeze_excitation_layer(conv1)
+    pool1 = tf.keras.layers.MaxPooling2D((2, 2))(conv1)
+    pool1 = tf.keras.layers.Dropout(DropoutRatio / 2)(pool1)
+
+    # 50 -> 25
+    conv2 = tf.keras.layers.Conv2D(start_neurons * 2, (3, 3), activation=activation, padding="same")(pool1)
+    conv2 = residual_block(conv2, start_neurons * 2)
+    conv2 = residual_block(conv2, start_neurons * 2, True)
+    conv2 = squeeze_excitation_layer(conv2)
+    pool2 = tf.keras.layers.MaxPooling2D((2, 2))(conv2)
+    pool2 = tf.keras.layers.Dropout(DropoutRatio)(pool2)
+
+    # 25 -> 12
+    conv3 = tf.keras.layers.Conv2D(start_neurons * 4, (3, 3), activation=activation, padding="same")(pool2)
+    conv3 = residual_block(conv3, start_neurons * 4)
+    conv3 = residual_block(conv3, start_neurons * 4, True)
+    conv3 = squeeze_excitation_layer(conv3)
+    pool3 = tf.keras.layers.MaxPooling2D((2, 2))(conv3)
+    pool3 = tf.keras.layers.Dropout(DropoutRatio)(pool3)
+
+    # 12 -> 6
+    conv4 = tf.keras.layers.Conv2D(start_neurons * 8, (3, 3), activation=activation, padding="same")(pool3)
+    conv4 = residual_block(conv4, start_neurons * 8)
+    conv4 = residual_block(conv4, start_neurons * 8, True)
+    conv4 = squeeze_excitation_layer(conv4)
+    pool4 = tf.keras.layers.MaxPooling2D((2, 2))(conv4)
+    pool4 = tf.keras.layers.Dropout(DropoutRatio)(pool4)
+
+    # Middle
+    convm = tf.keras.layers.Conv2D(start_neurons * 16, (3, 3), activation=activation, padding="same")(pool4)
+    convm = residual_block(convm, start_neurons * 16)
+    convm = residual_block(convm, start_neurons * 16, True)
+
+    # 6 -> 12
+    deconv4 = tf.keras.layers.Conv2DTranspose(start_neurons * 8, (3, 3), strides=(2, 2), padding="same")(convm)
+    uconv4 = tf.keras.layers.concatenate([deconv4, conv4])
+    uconv4 = tf.keras.layers.Dropout(DropoutRatio)(uconv4)
+
+    uconv4 = tf.keras.layers.Conv2D(start_neurons * 8, (3, 3), activation=activation, padding="same")(uconv4)
+    uconv4 = residual_block(uconv4, start_neurons * 8)
+    uconv4 = residual_block(uconv4, start_neurons * 8, True)
+    uconv4 = squeeze_excitation_layer(uconv4)
+
+    # 12 -> 25
+    # deconv3 = Conv2DTranspose(start_neurons * 4, (3, 3), strides=(2, 2), padding="same")(uconv4)
+    deconv3 = tf.keras.layers.Conv2DTranspose(start_neurons * 4, (3, 3), strides=(2, 2), padding="valid")(uconv4)
+    uconv3 = tf.keras.layers.concatenate([deconv3, conv3])
+    uconv3 = tf.keras.layers.Dropout(DropoutRatio)(uconv3)
+
+    uconv3 = tf.keras.layers.Conv2D(start_neurons * 4, (3, 3), activation=activation, padding="same")(uconv3)
+    uconv3 = residual_block(uconv3, start_neurons * 4)
+    uconv3 = residual_block(uconv3, start_neurons * 4, True)
+    uconv3 = squeeze_excitation_layer(uconv3)
+
+    # 25 -> 50
+    deconv2 = tf.keras.layers.Conv2DTranspose(start_neurons * 2, (3, 3), strides=(2, 2), padding="same")(uconv3)
+    uconv2 = tf.keras.layers.concatenate([deconv2, conv2])
+
+    uconv2 = tf.keras.layers.Dropout(DropoutRatio)(uconv2)
+    uconv2 = tf.keras.layers.Conv2D(start_neurons * 2, (3, 3), activation=activation, padding="same")(uconv2)
+    uconv2 = residual_block(uconv2, start_neurons * 2)
+    uconv2 = residual_block(uconv2, start_neurons * 2, True)
+    uconv2 = squeeze_excitation_layer(uconv2)
+
+    # 50 -> 101
+    # deconv1 = Conv2DTranspose(start_neurons * 1, (3, 3), strides=(2, 2), padding="same")(uconv2)
+    deconv1 = tf.keras.layers.Conv2DTranspose(start_neurons * 1, (3, 3), strides=(2, 2), padding="valid")(uconv2)
+    uconv1 = tf.keras.layers.concatenate([deconv1, conv1])
+
+    uconv1 = tf.keras.layers.Dropout(DropoutRatio)(uconv1)
+    uconv1 = tf.keras.layers.Conv2D(start_neurons * 1, (3, 3), activation=activation, padding="same")(uconv1)
+    uconv1 = residual_block(uconv1, start_neurons * 1)
+    uconv1 = residual_block(uconv1, start_neurons * 1, True)
+    uconv1 = squeeze_excitation_layer(uconv1)
+
+    # uconv1 = Dropout(DropoutRatio/2)(uconv1)
+    # output_layer = Conv2D(1, (1,1), padding="same", activation="sigmoid")(uconv1)
+    output_layer_noActi = tf.keras.layers.Conv2D(1, (1, 1), padding="same", activation=activation)(uconv1)
+    output_layer = tf.keras.layers.Activation('sigmoid')(output_layer_noActi)
+
+    return output_layer
+
 
 if __name__ == '__main__':
     model = UnetModel()

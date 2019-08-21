@@ -1,6 +1,5 @@
 from __future__ import division
 import tensorflow as tf
-from keras import backend as K
 
 
 def dice_coeff(y_true, y_pred):
@@ -35,8 +34,17 @@ def jaccard_loss(y_true, y_pred):
     return 1 - jaccard(y_true, y_pred)
 
 
-def bce_jacard_loss(y_true, y_pred):
-    return jaccard(y_true, y_pred) + tf.keras.losses.binary_crossentropy(y_true, y_pred)
+def log_jaccard_loss(y_true, y_pred):
+    return - tf.log(jaccard(y_true, y_pred))
+
+
+def bce_jaccard_loss(y_true, y_pred):
+    return 0.8 * jaccard_loss(y_true, y_pred) + 0.2 * tf.keras.losses.binary_crossentropy(y_true, y_pred)
+
+
+def bce_log_jaccard_loss(y_true, y_pred):
+    return log_jaccard_loss(y_true, y_pred) + tf.keras.losses.binary_crossentropy(y_true, y_pred)
+
 
 def lovasz_grad(gt_sorted):
     """
@@ -108,7 +116,7 @@ def flatten_binary_scores(scores, labels, ignore=None):
 
 
 def lovasz_loss(y_true, y_pred):
-    y_true, y_pred = K.cast(K.squeeze(y_true, -1), 'int32'), K.cast(K.squeeze(y_pred, -1), 'float32')
+    y_true, y_pred = tf.cast(tf.squeeze(y_true, -1), 'int32'), tf.cast(tf.squeeze(y_pred, -1), 'float32')
     #logits = K.log(y_pred / (1. - y_pred))
     logits = y_pred #Jiaxin
     loss = lovasz_hinge(logits, y_true, per_image = True, ignore = None)
