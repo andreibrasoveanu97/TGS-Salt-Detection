@@ -22,6 +22,12 @@ def get_tf_pad(padding=((13, 14), (13, 14))):
     return tf_pad
 
 
+def get_tf_resize(size=(128, 128)):
+    def tf_resize(img, mask):
+        return tf.image.resize_bicubic(img, size), tf.image.resize_bicubic(mask, size)
+    return tf_resize
+
+
 def norm_and_float(img, mask):
     return tf.cast(img, tf.float64) / 255.0, tf.cast(mask, tf.float64) / 255.0
 
