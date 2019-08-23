@@ -521,6 +521,87 @@ def build_mnas_model(_input):
     return output_layer
 
 
+def build_ezo_model(_input):
+    input_layer = tf.keras.layers.Conv2D(3, (1, 1), padding="same")(_input)
+    conv1 = tf.keras.layers.Conv2D(32, (3, 3), padding="same")(input_layer)
+    pol1 = tf.keras.layers.MaxPooling2D((2, 2))(conv1)
+
+    conv2 = mnas_skip_block(pol1, _filters=16)
+    conv2 = mnas_res_block(conv2, filters=24)
+    conv2 = mnas_res_block(conv2, filters=24)
+
+    pol2 = tf.keras.layers.MaxPooling2D((2, 2))(conv2)
+
+    conv3 = mnas_res_se_block(pol2, 40, kernel_size=(5, 5))
+    conv3 = mnas_res_se_block(conv3, 40, kernel_size=(5, 5))
+    conv3 = mnas_res_se_block(conv3, 40, kernel_size=(5, 5))
+
+    pol3 = tf.keras.layers.MaxPooling2D((2, 2))(conv3)
+
+    conv4 = mnas_res_block(pol3, 80)
+    conv4 = mnas_res_block(conv4, 80)
+    conv4 = mnas_res_block(conv4, 80)
+    conv4 = mnas_res_block(conv4, 80)
+
+    pol4 = tf.keras.layers.MaxPooling2D((2, 2))(conv4)
+
+    conv5 = mnas_res_block(pol4, 112)
+    conv5 = squeeze_excitation_layer(_input=conv5, channels=112)
+    conv5 = mnas_res_block(conv5, 112)
+    conv5 = squeeze_excitation_layer(_input=conv5, channels=112)
+
+    pol5 = tf.keras.layers.MaxPooling2D((2, 2))(conv5)
+
+    middle = mnas_res_block(pol5, 160, kernel_size=(5, 5))
+    middle = squeeze_excitation_layer(_input=middle, channels=112)
+    middle = mnas_res_block(middle, 160, kernel_size=(5, 5))
+    middle = squeeze_excitation_layer(_input=middle, channels=112)
+    middle = mnas_res_block(middle, 160, kernel_size=(5, 5))
+    middle = squeeze_excitation_layer(_input=middle, channels=112)
+
+    middle = mnas_res_block(middle, 320)
+
+    factor = tf.keras.layers.Conv2D(1, (1, 1))(middle)
+    factor = tf.keras.layers.GlobalAveragePooling2D()(factor)
+
+    deconv5 = tf.keras.layers.Conv2DTranspose(112, strides=(2, 2), padding="same", kernel_size=(3, 3))(middle)
+    uconv5 = tf.keras.layers.concatenate([deconv5, conv5])
+    uconv5 = mnas_res_block(uconv5, 112)
+    uconv5 = squeeze_excitation_layer(_input=uconv5, channels=112)
+    uconv5 = mnas_res_block(uconv5, 112)
+    uconv5 = squeeze_excitation_layer(_input=uconv5, channels=112)
+
+    deconv4 = tf.keras.layers.Conv2DTranspose(80, strides=(2, 2), padding="same", kernel_size=(3, 3))(uconv5)
+    uconv4 = tf.keras.layers.concatenate([deconv4, conv4])
+
+    uconv4 = mnas_res_block(uconv4, 80)
+    uconv4 = mnas_res_block(uconv4, 80)
+    uconv4 = mnas_res_block(uconv4, 80)
+    uconv4 = mnas_res_block(uconv4, 80)
+
+    deconv3 = tf.keras.layers.Conv2DTranspose(40, strides=(2, 2), padding="same", kernel_size=(3, 3))(uconv4)
+    uconv3 = tf.keras.layers.concatenate([deconv3, conv3])
+
+    uconv3 = mnas_res_se_block(uconv3, 40, kernel_size=(5, 5))
+    uconv3 = mnas_res_se_block(uconv3, 40, kernel_size=(5, 5))
+    uconv3 = mnas_res_se_block(uconv3, 40, kernel_size=(5, 5))
+
+    deconv2 = tf.keras.layers.Conv2DTranspose(24, strides=(2, 2), padding="same", kernel_size=(3, 3))(uconv3)
+    uconv2 = tf.keras.layers.concatenate([deconv2, conv2])
+
+    uconv2 = mnas_res_block(uconv2, filters=24)
+    uconv2 = mnas_res_block(uconv2, filters=24)
+
+    deconv1 = tf.keras.layers.Conv2DTranspose(16, strides=(2, 2), padding="same", kernel_size=(3, 3))(uconv2)
+    uconv1 = tf.keras.layers.concatenate([deconv1, conv1])
+    uconv1 = mnas_skip_block(uconv1, _filters=16)
+    output_layer = tf.keras.layers.Conv2D(1, (1, 1), padding="same", activation=None)(uconv1)
+    output_layer = tf.keras.layers.Multiply()([factor, output_layer])
+    output_layer = tf.keras.layers.Activation('sigmoid')(output_layer)
+    return output_layer
+
+
+
 if __name__ == '__main__':
     inpt = tf.keras.layers.Input((224, 224, 1))
-    build_mnas_model(inpt)
+    build_ezo_model(inpt)

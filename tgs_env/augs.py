@@ -24,7 +24,8 @@ def get_tf_pad(padding=((13, 14), (13, 14))):
 
 def get_tf_resize(size=(128, 128)):
     def tf_resize(img, mask):
-        return tf.image.resize_bicubic(img, size), tf.image.resize_bicubic(mask, size)
+        return tf.image.resize(img, size), \
+               tf.image.resize(mask, size)
     return tf_resize
 
 
